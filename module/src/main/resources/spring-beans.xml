@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                      http://www.springframework.org/schema/beans/spring-beans-4.2.xsd
+                      http://www.springframework.org/schema/context
+                      http://www.springframework.org/schema/context/spring-context.xsd
+                      http://www.springframework.org/schema/aop
+                      http://www.springframework.org/schema/aop/spring-aop-4.2.xsd
+                      http://www.springframework.org/schema/tx
+                      http://www.springframework.org/schema/tx/spring-tx-4.2.xsd">
+
+    <context:component-scan base-package="com.sbt.rnd"></context:component-scan>
+
+
+    <aop:aspectj-autoproxy/>
+    <tx:annotation-driven proxy-target-class="true" mode="aspectj"/>
+    <context:property-placeholder location="module.properties" />
+
+    <bean id="transportObjectFactory" class="com.sbt.rnd.meetup2017.transport.impl.server.TransportObjectFactoryImpl"/>
+
+    <bean id="clientApiServer" class="com.sbt.rnd.meetup2017.transport.impl.server.SpringServerApi">
+        <constructor-arg name="objectFactory" ref="transportObjectFactory"/>
+        <constructor-arg name="baseApiPackage" value="com.sbt.rnd.meetup2017.transport.api.client"/>
+        <constructor-arg name="baseServicesPackage" value="com.sbt.rnd.meetup2017.transport.api.impl"/>
+    </bean>
+
+    <bean id="accountApiServer" class="com.sbt.rnd.meetup2017.transport.impl.server.SpringServerApi">
+        <constructor-arg name="objectFactory" ref="transportObjectFactory"/>
+        <constructor-arg name="baseApiPackage" value="com.sbt.rnd.meetup2017.transport.api.account"/>
+        <constructor-arg name="baseServicesPackage" value="com.sbt.rnd.meetup2017.transport.api.impl"/>
+    </bean>
+
+    <bean id="documentApiServer" class="com.sbt.rnd.meetup2017.transport.impl.server.SpringServerApi">
+        <constructor-arg name="objectFactory" ref="transportObjectFactory"/>
+        <constructor-arg name="baseApiPackage" value="com.sbt.rnd.meetup2017.transport.api.document"/>
+        <constructor-arg name="baseServicesPackage" value="com.sbt.rnd.meetup2017.transport.api.impl"/>
+    </bean>
+
+</beans>
