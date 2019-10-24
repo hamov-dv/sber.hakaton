@@ -50,11 +50,11 @@ public class RpcServerImpl extends RemoteInvocationBasedExporter implements Mess
     }
 
     private String getTopic(Message message) {
-        return message.getProperties().getDestination();
+        return message.getProperties().getDestinationWithNodeId();
     }
 
     private String getTopicReply(Message message) {
-        return getTopic(message) + "-reply";
+        return "reply-"+getTopic(message);
     }
 
     private ClassLoader getClassLoader() {
@@ -136,7 +136,7 @@ public class RpcServerImpl extends RemoteInvocationBasedExporter implements Mess
             message = Serializer.deserialize(record.value());
         } catch (ClassCastException ex) {
             LOGGER.error("ClassCastException {}", ex.getMessage());
-            reply(message.getProperties(), new RequestRuntimeException(ex.getMessage(),ex.getCause()));
+            reply(message.getProperties(), new RequestRuntimeException(ex.getMessage(), ex.getCause()));
             return null;
         }
 
@@ -145,8 +145,8 @@ public class RpcServerImpl extends RemoteInvocationBasedExporter implements Mess
 
         } catch (Exception e) {
             e.printStackTrace();
-            LOGGER.error("Exception {} {}", e.getMessage(),e.getCause());
-            reply(message.getProperties(), new RequestRuntimeException(e.getMessage(),e.getCause()));
+            LOGGER.error("Exception {} {}", e.getMessage(), e.getCause());
+            reply(message.getProperties(), new RequestRuntimeException(e.getMessage(), e.getCause()));
        /* } catch (NoSuchMethodException e) {
             e.printStackTrace();
             LOGGER.error("NoSuchMethodException {}", e.getMessage());
@@ -170,7 +170,7 @@ public class RpcServerImpl extends RemoteInvocationBasedExporter implements Mess
 
     @Override
     public void startServer() {
-        List<String> topics = Arrays.asList(apiClass.getName());
+        List<String> topics = Arrays.asList(apiClass.getName() + "_" + nodeId);
 
       /*  MessageHandler handler = new MessageHandler<ConsumerRecord<String, byte[]>>() {
             @Override

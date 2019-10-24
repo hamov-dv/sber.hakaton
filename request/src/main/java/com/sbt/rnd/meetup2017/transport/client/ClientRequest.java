@@ -20,7 +20,7 @@ public class ClientRequest {
                 new AnnotationConfigApplicationContext("com.sbt.rnd.meetup2017.transport.config");
         ClientApiRequest clientApiRequest = (ClientApiRequest) context.getBean("clientApiRequest");
         TransportRequest<Client> request = clientApiRequest.create("test", "1234567890", null);
-        Client client=request.call();
+        Client client=request.callOnNode("333");
         System.out.println(client.toString());
 
         AccountApiRequest accountApiRequest = (AccountApiRequest) context.getBean("accountApiRequest");

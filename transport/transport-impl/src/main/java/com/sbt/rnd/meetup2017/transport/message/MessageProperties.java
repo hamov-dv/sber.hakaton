@@ -88,6 +88,10 @@ public class MessageProperties implements Serializable {
         this.timeout = timeout;
     }
 
+    public String getDestinationWithNodeId() {
+        return getDestination() + "_" + getNodeId();
+    }
+
     @Override
     public String toString() {
         return "MessageProperties{" +

@@ -1,21 +1,25 @@
 package com.sbt.rnd.meetup2017.transport.impl.client;
 
 import com.sbt.rnd.meetup2017.transport.api.RequestRuntimeException;
-import com.sbt.rnd.meetup2017.transport.impl.*;
+import com.sbt.rnd.meetup2017.transport.impl.MessageHandler;
+import com.sbt.rnd.meetup2017.transport.impl.MethodInvocation;
+import com.sbt.rnd.meetup2017.transport.impl.Rpc;
+import com.sbt.rnd.meetup2017.transport.impl.TransportConsumerKafka;
 import com.sbt.rnd.meetup2017.transport.message.Message;
 import com.sbt.rnd.meetup2017.transport.message.MessageProperties;
 import com.sbt.rnd.meetup2017.transport.message.Serializer;
 import com.sbt.rnd.meetup2017.transport.producer.TransportProducer;
 import com.sbt.rnd.meetup2017.transport.producer.TransportProducerKafka;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 
 public class RpcRequestImpl implements Rpc, MessageHandler<ConsumerRecord<String, byte[]>> {
@@ -34,11 +38,11 @@ public class RpcRequestImpl implements Rpc, MessageHandler<ConsumerRecord<String
         this.moduleId = moduleId;
     }
 
-    private Message createRemoteCallMessage(String methodName, Object[] args, Class[] types) {
+    private Message createRemoteCallMessage(String methodName, Object[] args, Class[] types, String node) {
         MessageProperties properties = new MessageProperties();
         properties.setMethod(methodName);
         properties.setDate(new Date());
-        properties.setNodeId(nodeId);
+        properties.setNodeId(node);
         properties.setApiName(apiClass.getName());
         properties.setModuleId(moduleId);
         properties.setDestination(apiClass.getName());
@@ -62,11 +66,29 @@ public class RpcRequestImpl implements Rpc, MessageHandler<ConsumerRecord<String
     }
 
     private String getTopic(Message message) {
-        return message.getProperties().getDestination();
+        String nodeId = message.getProperties().getNodeId();
+        if (nodeId == null) {
+            Map<String, List<PartitionInfo>> topics;
+            Properties props = new Properties();
+            props.put("bootstrap.servers", bootstrapServer);
+            props.put("group.id", groupId);
+            props.put("key.deserializer", StringDeserializer.class.getName());
+            props.put("value.deserializer", ByteArrayDeserializer.class.getName());
+            KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(props);
+            try {
+                topics = consumer.listTopics();
+                nodeId = topics.keySet().stream().filter(f -> f.contains(message.getProperties().getDestination() + "_")).findAny().get().split("_")[1];
+                message.getProperties().setNodeId(nodeId);
+            } finally {
+                consumer.close();
+            }
+        }
+
+        return message.getProperties().getDestinationWithNodeId();
     }
 
-    private String getTopicReply(Message message) {
-        return getTopic(message) + "-reply";
+    private String getTopicReply(String topicName) {
+        return "reply-"+topicName;
     }
 
     private <T> T sendMessage(Message message) {
@@ -79,7 +101,7 @@ public class RpcRequestImpl implements Rpc, MessageHandler<ConsumerRecord<String
             @Override
             public Object call() throws Exception {
 
-                TransportConsumerKafka<ConsumerRecord<String, byte[]>> transportConsumer = new TransportConsumerKafka(123, groupId, bootstrapServer, Arrays.asList(getTopicReply(message)), handler);
+                TransportConsumerKafka<ConsumerRecord<String, byte[]>> transportConsumer = new TransportConsumerKafka(123, groupId, bootstrapServer, Arrays.asList(getTopicReply(topic)), handler);
 
                 return transportConsumer.getMsgReply();
             }
@@ -99,8 +121,8 @@ public class RpcRequestImpl implements Rpc, MessageHandler<ConsumerRecord<String
     }
 
     @Override
-    public <T> T callMethod(String methodName, Object[] args, Class[] types) {
-        Message msg = createRemoteCallMessage(methodName, args, types);
+    public <T> T callMethod(String methodName, Object[] args, Class[] types, String node) {
+        Message msg = createRemoteCallMessage(methodName, args, types, node);
 
         return sendMessage(msg);
     }

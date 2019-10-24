@@ -31,7 +31,12 @@ public class RequestInterceptor<T> implements MethodInterceptor {
         @Override
         public T call() {
 
-            return rpc.callMethod(methodInvocation.getMethod().getName(), methodInvocation.getArguments(), methodInvocation.getMethod().getParameterTypes());
+            return rpc.callMethod(methodInvocation.getMethod().getName(), methodInvocation.getArguments(), methodInvocation.getMethod().getParameterTypes(), null);
+        }
+
+        @Override
+        public T callOnNode(String nodeId) {
+            return rpc.callMethod(methodInvocation.getMethod().getName(), methodInvocation.getArguments(), methodInvocation.getMethod().getParameterTypes(), nodeId);
         }
 
     }
